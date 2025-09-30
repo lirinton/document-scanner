@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.8;
+        }
+        
+        .main-content {
+            padding: 30px;
+        }
+        
+        .status-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid #6c757d;
+        }
+        
+        .status-online {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .status-offline {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .status-scanning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        .control-panel {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .scan-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.3em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .scan-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .scan-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 25px;
+            min-height: 200px;
+        }
+        
+        .result-text {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 1.1em;
+        }
+        
+        .empty-result {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .success-message {
+            color: #155724;
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .copy-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s ease;
+        }
+        
+        .copy-button:hover {
+            background: #218838;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 Document Scanner</h1>
+            <div class="subtitle">Scan documents with your USB camera and extract text using OCR</div>
+        </header>
+        
+        <div class="main-content">
+            <div id="statusPanel" class="status-panel">
+                <h3>System Status</h3>
+                <div id="statusText">Checking camera status...</div>
+                <div id="resolutionInfo"></div>
+            </div>
+            
+            <div class="control-panel">
+                <button id="scanButton" class="scan-button" onclick="startScan()">
+                    📸 Scan Document
+                </button>
+            </div>
+            
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Scanning in progress... Please wait.</p>
+            </div>
+            
+            <div class="result-panel">
+                <h3>Extracted Text</h3>
+                <div id="resultContent">
+                    <div class="empty-result">No scan results yet. Click the Scan Document button to start.</div>
+                </div>
+                <button id="copyButton" class="copy-button" onclick="copyToClipboard()" style="display: none;">
+                    📋 Copy to Clipboard
+                </button>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Document Scanner | OCR Powered by Tesseract</p>
+        </footer>
+    </div>
+
+    <script>
+        let statusCheckInterval;
+        let resultCheckInterval;
+        
+        // Update system status
+        function updateStatus() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusPanel = document.getElementById('statusPanel');
+                    const statusText = document.getElementById('statusText');
+                    const resolutionInfo = document.getElementById('resolutionInfo');
+                    const scanButton = document.getElementById('scanButton');
+                    
+                    // Update status text and styling
+                    if (data.camera_online) {
+                        statusText.innerHTML = '✅ Camera Online';
+                        statusPanel.className = 'status-panel status-online';
+                        scanButton.disabled = data.scan_in_progress;
+                    } else {
+                        statusText.innerHTML = '❌ Camera Offline';
+                        statusPanel.className = 'status-panel status-offline';
+                        scanButton.disabled = true;
+                    }
+                    
+                    // Update resolution info
+                    if (data.resolution) {
+                        resolutionInfo.innerHTML = `Resolution: ${data.resolution[0]} × ${data.resolution[1]}`;
+                    } else {
+                        resolutionInfo.innerHTML = '';
+                    }
+                    
+                    // Handle scanning state
+                    const loading = document.getElementById('loading');
+                    if (data.scan_in_progress) {
+                        statusPanel.classList.add('status-scanning');
+                        loading.style.display = 'block';
+                        scanButton.disabled = true;
+                        scanButton.textContent = '🔄 Scanning...';
+                    } else {
+                        loading.style.display = 'none';
+                        scanButton.textContent = '📸 Scan Document';
+                    }
+                    
+                    // Show error if any
+                    if (data.error) {
+                        statusText.innerHTML += `<div class="error-message">Error: ${data.error}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Status check failed:', error);
+                    document.getElementById('statusText').innerHTML = 
+                        '❌ Failed to check status. Is the server running?';
+                });
+        }
+        
+        // Start document scan
+        function startScan() {
+            const scanButton = document.getElementById('scanButton');
+            scanButton.disabled = true;
+            
+            fetch('/scan', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Start polling for results
+                    checkForScanResult();
+                } else {
+                    alert('Scan failed to start: ' + (data.error || 'Unknown error'));
+                    scanButton.disabled = false;
+                }
+            })
+            .catch(error => {
+                alert('Scan request failed: ' + error);
+                scanButton.disabled = false;
+            });
+        }
+        
+        // Check for scan results
+        function checkForScanResult() {
+            if (resultCheckInterval) {
+                clearInterval(resultCheckInterval);
+            }
+            
+            resultCheckInterval = setInterval(() => {
+                fetch('/last_result')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.timestamp) {
+                            displayResult(data);
+                            clearInterval(resultCheckInterval);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Result check failed:', error);
+                    });
+            }, 1000);
+        }
+        
+        // Display scan results
+        function displayResult(result) {
+            const resultContent = document.getElementById('resultContent');
+            const copyButton = document.getElementById('copyButton');
+            
+            if (result.success) {
+                if (result.text && result.text !== 'No text detected') {
+                    resultContent.innerHTML = `<div class="result-text">${result.text}</div>`;
+                    copyButton.style.display = 'block';
+                } else {
+                    resultContent.innerHTML = '<div class="empty-result">No text could be detected in the document.</div>';
+                    copyButton.style.display = 'none';
+                }
+            } else {
+                resultContent.innerHTML = `<div class="error-message">Scan failed: ${result.error || 'Unknown error'}</div>`;
+                copyButton.style.display = 'none';
+            }
+        }
+        
+        // Copy text to clipboard
+        function copyToClipboard() {
+            const resultText = document.querySelector('.result-text');
+            if (resultText) {
+                navigator.clipboard.writeText(resultText.textContent)
+                    .then(() => {
+                        alert('Text copied to clipboard!');
+                    })
+                    .catch(err => {
+                        alert('Failed to copy text: ' + err);
+                    });
+            }
+        }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Start status updates
+            updateStatus();
+            statusCheckInterval = setInterval(updateStatus, 3000);
+            
+            // Check for any existing results on load
+            fetch('/last_result')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.timestamp) {
+                        displayResult(data);
+                    }
+                });
+        });
+    </script>
+</body>
+</html>
